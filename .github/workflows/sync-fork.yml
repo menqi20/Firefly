@@ -1,8 +1,10 @@
 name: Sync Fork with Upstream
+
 on:
   schedule:
     - cron: '0 2 * * *'  # 每天 UTC 时间 2:00 运行
-  workflow_dispatch:       # 允许在网页上手动触发
+  workflow_dispatch:     # 允许在网页上手动触发
+
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -10,17 +12,36 @@ jobs:
       - name: Checkout fork
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # 获取完整的提交历史，这对于合并是必需的
+
       - name: Add upstream remote
         run: git remote add upstream https://github.com/CuteLeaf/Firefly.git
+
       - name: Fetch upstream
         run: git fetch upstream
+
+      - name: Configure Git User
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Determine default branch
+        id: default_branch
+        run: |
+          # 尝试获取上游仓库的默认分支名称，通常是 main 或 master
+          DEFAULT_BRANCH=$(git ls-remote --symref upstream HEAD | grep -o 'refs/heads/[^ ]*' | sed 's|refs/heads/||')
+          echo "branch=$DEFAULT_BRANCH" >> $GITHUB_OUTPUT
+          echo "Default branch is $DEFAULT_BRANCH"
+
       - name: Merge upstream changes
         run: |
-          git checkout main
-          git merge upstream/main
+          # 切换到本地默认分支
+          git checkout ${{ steps.default_branch.outputs.branch }}
+          # 合并上游默认分支的更改
+          git merge upstream/${{ steps.default_branch.outputs.branch }} --no-edit
+
       - name: Push changes to fork
         uses: ad-m/github-push-action@master
         with:
-          branch: main
+          branch: ${{ steps.default_branch.outputs.branch }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
