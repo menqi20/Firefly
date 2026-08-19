@@ -2,8 +2,8 @@ name: Daily Sync Fork with Upstream
 
 on:
   schedule:
-    # 每天 UTC 时间 02:00 运行 = 北京时间 10:00
-    - cron: '0 2 * * *'
+    # 每天 UTC 时间 02:00 运行 = 北京时间 10:00  #- cron: '0 2 * * *'
+    - cron: '0 2 */3 * *' 
   # 也支持手动点击按钮触发
   workflow_dispatch:
 
