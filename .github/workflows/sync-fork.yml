@@ -37,4 +37,8 @@ jobs:
           git checkout "${TARGET_BRANCH}"
           git merge "upstream/${UPSTREAM_BRANCH}" --no-edit
 
+          # === 修复：push 前先同步 origin，避免 non-fast-forward 错误 ===
+          git fetch origin
+          git merge origin/"${TARGET_BRANCH}" --no-edit
+
           git push origin "${TARGET_BRANCH}"
