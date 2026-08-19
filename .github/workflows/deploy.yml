@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   workflow_dispatch:
 
 # Pages 部署需要的权限
@@ -22,31 +22,50 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          
+          node-version: "22"
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 11.22.0
           run_install: false
-          
+
+      # 🚀 优化：增加 pnpm 缓存，大幅缩短安装时间
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      # 🔒 修复：使用 frozen-lockfile 确保 CI 与本地依赖一致
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-      
+        run: pnpm install --frozen-lockfile
+
+      # 🛠️ 修复：注入 BASE_PATH，防止子路径部署时资源 404
+      # ⚠️ 请将 'Firefly' 替换为你实际的 GitHub 仓库名称
       - name: Build site
         run: pnpm run build
+        env:
+          BASE_PATH: "/Firefly/"
 
-      - name: Create .nojekyll file
-        run: touch dist/.nojekyll
-      
+      # 🗑️ 优化：移除了 `touch dist/.nojekyll`
+      # 官方 actions/deploy-pages 已默认禁用 Jekyll，无需手动创建
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist  # Astro默认构建输出目录
+          path: dist
 
   deploy:
     environment:
